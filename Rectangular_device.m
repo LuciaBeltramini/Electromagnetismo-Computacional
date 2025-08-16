@@ -50,7 +50,7 @@ rect_width  = 0.2 * centimeters;
 rect_height = 0.2 * centimeters;
 
 % DEFINE FDFD PARAMETERS
-NRES   = 50;
+NRES   = 100;
 SPACER = lam0*[1 1];
 NPML   = [20 20 20 20];
 ermax  = max([er1 er2]);
@@ -186,3 +186,4 @@ colorbar;
 xlabel('Eje X [m]');
 ylabel('Eje Y [m]');
 title('R(Ez)');
+
