@@ -33,21 +33,19 @@ c0 = 299792458 * meters/seconds;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % DEFINE PLANE WAVE SOURCE PARAMETERS
-f0    = 60.0 * gigahertz;
+f0    = 120.0 * gigahertz;
 theta = 30*degrees;
 lam0  = c0/f0;
 k0    = 2*pi/lam0;
 MODE  = 'E';
 
 % DEFINE DIFFRACTION GRATING PARAMETERS
-L   = 1.5 * centimeters;
-d   = 1.0 * centimeters;
 er1 = 1.0;
 er2 = 9.0;
 
 % DEVICE DIMENSIONS
-rect_width  = 0.2 * centimeters;
-rect_height = 0.2 * centimeters;
+rect_width  = lam0 * 2.75;
+rect_height = lam0 * 2.75;
 
 % DEFINE FDFD PARAMETERS
 NRES   = 100;
@@ -72,11 +70,11 @@ ny = ceil(rect_height/dy);
 dy = rect_height/ny;
 
 % GRID SIZE
-Sx = L;
+Sx = SPACER(1) + rect_width + SPACER(2);
 Nx = ceil(Sx/dx);
 Sx = Nx*dx;
 
-Sy = SPACER(1) + d + SPACER(2);
+Sy = SPACER(1) + rect_height + SPACER(2);
 Ny = NPML(1) + ceil(Sy/dy) + NPML(1);
 Sy = Ny*dy;
 
@@ -186,4 +184,5 @@ colorbar;
 xlabel('Eje X [m]');
 ylabel('Eje Y [m]');
 title('R(Ez)');
+
 
