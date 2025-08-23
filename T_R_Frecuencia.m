@@ -268,3 +268,4 @@ if length(values) ~= 1
     legend({'R (Reflectancia)','T (Transmittancia)'}, 'Location','best');
 end
 
+
