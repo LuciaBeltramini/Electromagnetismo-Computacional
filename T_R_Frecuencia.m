@@ -91,8 +91,8 @@ for f0 = values
     Sy = Ny*dy;
     
     % ZONE OF INTEGRATION (ZI) FOR R & T
-    y_ref = Ny - round(Ny/2) - round(2*lam0/dy);
-    y_trn = Ny - round(Ny/2) + round(2*lam0/dy);
+    y_ref = round(Ny/2) - round(2*lam0/dy);
+    y_trn = round(Ny/2) + round(2*lam0/dy);
     
     % 2X GRID
     Nx2 = 2*Nx;             dx2 = dx/2;
@@ -267,5 +267,6 @@ if length(values) ~= 1
     ylim([0 1.5]);
     legend({'R (Reflectancia)','T (Transmittancia)'}, 'Location','best');
 end
+
 
 
