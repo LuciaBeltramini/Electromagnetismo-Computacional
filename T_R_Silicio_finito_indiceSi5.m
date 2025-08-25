@@ -56,7 +56,7 @@ for lam0 = wavelength
     n_Si = indiceSi5(lam0);
     
     % AIR
-    n_air = 1;
+    n_air = 1.00029;
     
     % EFFECTIVE REFRACTIVE INDEX
     p = 0.46; 
@@ -216,6 +216,7 @@ for lam0 = wavelength
         xlabel('Eje X [m]');
         ylabel('Eje Y [m]');
         title('R(Ez)');
+        colormap(flipud(cool));
     end
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -288,4 +289,5 @@ if length(wavelength) ~= 1
     grid on;
     ylim([0 105]);
     legend({'R (Reflectancia)','T (Transmitancia)', 'A (Absrobancia)'}, 'Location','best');   
+
 end
