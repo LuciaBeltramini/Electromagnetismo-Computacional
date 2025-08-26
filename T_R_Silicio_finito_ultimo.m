@@ -165,7 +165,19 @@ for lam0 = wavelength
             y_trn_pos = ya(y_trn);   
             line([min(xa2) max(xa2)], [y_ref_pos y_ref_pos], 'Color','k','LineWidth',1.5);
             line([min(xa2) max(xa2)], [y_trn_pos y_trn_pos], 'Color','k','LineWidth',1.5);
-            colormap(flipud(cool));
+            
+            % DEFINE THE GRAPGH'S COLORS
+            violet   = [0.5 0  0.3];   
+            red      = [1   0   0.7];     
+            yellow   = [1   1   0];
+            n = 256;  
+            cmap = [linspace(violet(1), red(1), n/2)' , ...
+                    linspace(violet(2), red(2), n/2)' , ...
+                    linspace(violet(3), red(3), n/2)'; ...
+                    linspace(red(1), yellow(1), n/2)' , ...
+                    linspace(red(2), yellow(2), n/2)' , ...
+                    linspace(red(3), yellow(3), n/2)'];
+            colormap(cmap);
         hold off;
         end
         
@@ -232,7 +244,7 @@ for lam0 = wavelength
             xlabel('Eje X [m]');
             ylabel('Eje Y [m]');
             title('R(Ez)');
-            colormap(flipud(cool));
+            colormap(cmap);
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -310,4 +322,5 @@ if length(wavelength) ~= 1
     grid on;
     ylim([0 105]);
     legend({'R (Reflectancia)','T (Transmitancia)', 'A (Absrobancia)'}, 'Location','best');   
+
 end
