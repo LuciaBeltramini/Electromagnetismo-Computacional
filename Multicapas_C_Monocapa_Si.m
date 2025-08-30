@@ -2,36 +2,36 @@ function []=Multicapas_C()
 %Diseno de un multicapa de materiales arbitrarios. Estos materiales deben
 %poseer una funcion que devuelva el indice de refraccion (complejo) en
 %funcion de la longitud de onda. 
-%En esta versión se genera un solo archivo con todas las funciones
+%En esta versiÃ³n se genera un solo archivo con todas las funciones
 %Se piden una serie de datos iniciales que configuran el tipo de calculo a
 %realizar, que puede ser uno o varios de los siguientes:
 %1_ Calcular la reflectancia, transmitancia y absorbancia de la multicapa
 %2_ Calcular el campo electrico dentro de las multicapas.
 %3_ Dibujar la multicapa en diagramas de colores.
-%Si se da una lista de longitudes de onda y un solo valor de ángulo
-%calcula el espectro para ese valor de ángulo.
+%Si se da una lista de longitudes de onda y un solo valor de Ã¡ngulo
+%calcula el espectro para ese valor de Ã¡ngulo.
 %Si se dan varios valores de angulo y una sola longitud de onda se
-%dibuja en función de los primeros.
-%Si se dan dos vectores, uno para el ángulo y otro para la longitud de onda construye
-%gráficos de contornos. En este caso no se dibuja el campo electrico.
-%Esta version utiliza la función "Rugosear3", esta permite introducir un 
-%parámetro "delta" de rugosidad las interfases de la multicapa, puede ser la 
+%dibuja en funciÃ³n de los primeros.
+%Si se dan dos vectores, uno para el Ã¡ngulo y otro para la longitud de onda construye
+%grÃ¡ficos de contornos. En este caso no se dibuja el campo electrico.
+%Esta version utiliza la funciÃ³n "Rugosear3", esta permite introducir un 
+%parÃ¡metro "delta" de rugosidad las interfases de la multicapa, puede ser la 
 %misma para todas las interfases o tener diferentes valores. Esta Rugosidad
 %se simula realizando un cambio suave de indice de refraccion en la
 %interfase.
 %En esta version se incorpora la posibilidad de agregar una rugosidad
 %"corta" que corresponde a analizar posibles variaciones en los espesores
 %de cada capa. Cada capa presenta un "delta_c" que indica la desviacion
-%estandar de la fluctuación. Puede ser la misma para todas las interfases o
+%estandar de la fluctuaciÃ³n. Puede ser la misma para todas las interfases o
 %tener distintos valores. 
 %falta incorporar este calculo para angulos distintos.
 %version 6/7/2023 Cuchu 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% PARAMETROS DE INTERES PARA COMPARAR ESTE CÓDIGO CON EL DE FDFD
+%% PARAMETROS DE INTERES PARA COMPARAR ESTE CÃ“DIGO CON EL DE FDFD
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%Polarización de la onda incidente:
+%PolarizaciÃ³n de la onda incidente:
 p=0;               %Si es una onda s => p=0, si es una onda p => p=1, valores intermedios indican polarizaciones intermedias
 
 %Angulo de incidencia:
@@ -45,7 +45,7 @@ Npl=11;            %Numero de valores de longitud de onda tomados en este rango 
 %Medios:
 Medios=[1 101 1];
 
-%Tamaño de cada medio:
+%TamaÃ±o de cada medio:
 d=-ones(1,length(Medios)-2);
 d(1)=2.1994e-06;
 
@@ -63,10 +63,10 @@ P1=0.46;       %Si rugosidad_c es igual a 1 sortea varias configuraciones posibl
 %%%%%%%%%%%%%%%%%%% Definicion del problema a resolver  %%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%p=0;               %polarización de la onda incidente (si es una onda s => p=0, si es una onda p => p=1, valores intermedios indican polarizaciones intermedias)
-lambda0=500*0.9702e-9;     %longitud de onda de referencia (en metros) que se utiliza para calcular espesores de capas como espesores ópticos a esa longitud de onda y para realizar el dibujo de la multicapa (el índice de refracción de cada capa se calcula a esa longitud de onda)
+%p=0;               %polarizaciÃ³n de la onda incidente (si es una onda s => p=0, si es una onda p => p=1, valores intermedios indican polarizaciones intermedias)
+lambda0=500*0.9702e-9;     %longitud de onda de referencia (en metros) que se utiliza para calcular espesores de capas como espesores Ã³pticos a esa longitud de onda y para realizar el dibujo de la multicapa (el Ã­ndice de refracciÃ³n de cada capa se calcula a esa longitud de onda)
 
-%rango de valores de longitud de onda en metros donde se realiza el cálculo del espectro
+%rango de valores de longitud de onda en metros donde se realiza el cÃ¡lculo del espectro
 % lambdai=700e-9;
 % lambdaf=800e-9;
 % Npl=11;            %Numero de valores de longitud de onda tomados en este rango (si Npl=1 solo se toma lambdai).
@@ -74,31 +74,31 @@ lambda0=500*0.9702e-9;     %longitud de onda de referencia (en metros) que se ut
 %rango de valores de angulo en grados donde se desea calcular
 %tetai=0;
 tetaf=70;
-Npt=1;              %Numero de valores tomados en este rango (Si Npt=1 solo realiza el cálculo para tetai).
+Npt=1;              %Numero de valores tomados en este rango (Si Npt=1 solo realiza el cÃ¡lculo para tetai).
 
 
-CalculodeCampo=0;   %Si se elige igual a 1 se calcula y grafica el campo en el interior (funciona sólo si Npt=1 (un solo ángulo y rugosidad=0 y rugosidad_c=0)
-ndiv=20;            %Número de divisiones en cada capa para el calculo del campo electrico dentro de la multicapa (solo se aplica si CalculodeCampo=1).
+CalculodeCampo=0;   %Si se elige igual a 1 se calcula y grafica el campo en el interior (funciona sÃ³lo si Npt=1 (un solo Ã¡ngulo y rugosidad=0 y rugosidad_c=0)
+ndiv=20;            %NÃºmero de divisiones en cada capa para el calculo del campo electrico dentro de la multicapa (solo se aplica si CalculodeCampo=1).
 
 
 GraficaMulticapa=0; %Se elige igual a 1 si se desea que se grafique la multicapa que se pretende calcular
 
 
 %Ahora debemos construir el vector de medios: Por cada medio diferente se
-%debe ingresar un número diferente asociado a una funcion que devuelve el
-%indice de refraccion (complejo) como función de la longitud de onda (ver mas adelante
+%debe ingresar un nÃºmero diferente asociado a una funcion que devuelve el
+%indice de refraccion (complejo) como funciÃ³n de la longitud de onda (ver mas adelante
 %las definiciones precargadas con las que se cuenta)
 
 %Medios=[1 7 101 102 101 102 101 102  101 102 101 102 101 102 101 102  101 102 101 102 101 102 101 102 101 102 101 102 101 102 101 102 101 102 101 4  ];
 %Medios=[1 101 1];
 
 %Ahora debemos ingresar el vector de espesores "d" (en metros) que tiene dos elementos menos
-%que el vector de índices de refraccion (o que el vector de medios) ya que
+%que el vector de Ã­ndices de refraccion (o que el vector de medios) ya que
 %el primer medio corresponde al medio incidente (medio semiinfinito a la
 %izquierda digamos) y el ultimo medio corresponde al sustrato (medio
-%semiinfinito sobre el que está construida la multicapapa, a la derecha
+%semiinfinito sobre el que estÃ¡ construida la multicapapa, a la derecha
 %digamos). %Si el valor de espesor se coloca con signo negativo, se utiliza
-%allí un valor tal que produzca un espesor óptico de 1/4 de 
+%allÃ­ un valor tal que produzca un espesor Ã³ptico de 1/4 de 
 %la longitud de onda de referencia (el programa calcula automaticamente
 %cual debe ser el espesor de la capa correspondiente). 
 
@@ -123,17 +123,17 @@ Eliminacapas=0;       %Opcion que une capas iguales contiguas para disminuir el 
 rugosidad=0;          %Si rugosidad es igual a 1 aplica el suavizado a las interfases que corresponde a intercalar en cada interfase una serie de capas que "suavizan" el salto de indice de refraccion en la interfase
 %rugosidad_c=1;        %Si rugosidad_c es igual a 1 sortea varias configuraciones posibles a los espesores de las capas y calcula un valor medio de la relfectancia medida.
  
-delta=6e-8;        %Rugosidades para cada interfase (en metros). Corresponde al tamaño de la zona en que se produce el suavizado de un indice al siguiente. Tiene un elemento más que el vector de espesores, o sólo tiene un valor en cuyo caso todos los deltas se toman iguales. Este valor no se utiliza si rugosidad=0; 
-%delta_c=4e-8;   %Rugosidades para cada interfase (en metros). Corresponde a la variacion del espesor de cada capa (desciacion estandar). Tiene la misma cantidad de elementos que el vector de espesores, o sólo tiene un valor en cuyo caso todos los deltas se toman iguales. Este valor no se utiliza si rugosidad_c=0; 
+delta=6e-8;        %Rugosidades para cada interfase (en metros). Corresponde al tamaÃ±o de la zona en que se produce el suavizado de un indice al siguiente. Tiene un elemento mÃ¡s que el vector de espesores, o sÃ³lo tiene un valor en cuyo caso todos los deltas se toman iguales. Este valor no se utiliza si rugosidad=0; 
+%delta_c=4e-8;   %Rugosidades para cada interfase (en metros). Corresponde a la variacion del espesor de cada capa (desciacion estandar). Tiene la misma cantidad de elementos que el vector de espesores, o sÃ³lo tiene un valor en cuyo caso todos los deltas se toman iguales. Este valor no se utiliza si rugosidad_c=0; 
 
-Nepstein=10; %número de capas usadas para el suavizado. Este valor no se utiliza si rugosidad=0; 
+Nepstein=10; %nÃºmero de capas usadas para el suavizado. Este valor no se utiliza si rugosidad=0; 
 Ndelta=2;     %numero de veces delta que se discretiza a ambos lados de la interfase. Este valor no se utiliza si rugosidad=0; 
 
 %Nprom=200;    %numero de evaluaciones para calcular la respuesta promedio de las variaciones de espesor en cada capa. Este valor no se utiliza si rugosidad_c=0; 
 
-%Ahora debemos asignarle a cada medio una funcion indice de refracción
+%Ahora debemos asignarle a cada medio una funcion indice de refracciÃ³n
 
-%Se pueden definir aquí valores de porosidad que se utilicen en las capas
+%Se pueden definir aquÃ­ valores de porosidad que se utilicen en las capas
 %internas de la multicapa
 %P1=0.46;
 P2=0.82;
@@ -163,7 +163,7 @@ Nfun(8)=cellstr('Au(lambda)');              %indice de refraccion del Oro
 Nfun(9)=cellstr('Pt(lambda)');              %indice de refraccion del Platino
 Nfun(10)=cellstr('PZT(lambda)');            %indice de refraccion del PZT con que se construyen tipicamente los piezoelectricos
 Nfun(11)=cellstr('PMMA(lambda)');           %indice de refraccion del Polimetil-metacrilato (Acrilico)
-Nfun(12)=cellstr('SnO2(lambda)');           %indice de refraccion del Oxido de Estaño
+Nfun(12)=cellstr('SnO2(lambda)');           %indice de refraccion del Oxido de EstaÃ±o
 Nfun(13)=cellstr('Al2O3(lambda)');          %indice de refraccion de la alumina
 Nfun(14)=cellstr('ZnO(lambda)');            %indice de refraccion del oxido de Zinc
 Nfun(15)=cellstr('Siamorfo(lambda)');       %indice de refraccion del silicio amorfo
@@ -188,7 +188,7 @@ Nfun(101)=cellstr('looyenga(indiceSi5(lambda),1,P1)');            %Silicio Poros
 Nfun(102)=cellstr('looyenga(indiceSi5(lambda),1,P2)');            %Silicio Poroso (mezcla con aire) de porosidad P2. Usa el modelo de Looyenga-Lifshitz-Landau
 Nfun(103)=cellstr('looyenga(indiceSi5(lambda),indicealcohol(lambda),P1)');   %Silicio Poroso mojado con alcohol de porosidad P1. Usa el modelo de Looyenga-Lifshitz-Landau
 Nfun(104)=cellstr('looyenga(indiceSi5(lambda),indiceagua(lambda),P1)');      %Silicio Poroso mojado con agua de porosidad P1. Usa el modelo de Looyenga-Lifshitz-Landau
-Nfun(105)=cellstr('mezclahomogenea(f1,n1,n2)');                  %indice de refracción de una mezcla homogenea usando el modelo de Lorentz-Lorentz
+Nfun(105)=cellstr('mezclahomogenea(f1,n1,n2)');                  %indice de refracciÃ³n de una mezcla homogenea usando el modelo de Lorentz-Lorentz
 Nfun(106)=cellstr('looyengacil(PMMA(lambda),1,P1)');             %Acrilico poroso de porosidad P1. Usa un modelo del Looyenga considerando poros cilindricos.
 Nfun(107)=cellstr('Bruggeman(indiceSi5(lambda),n1,P1)');        	%Silicio Poroso lleno con un material de indice n1 con porosidad P1 . Se usa el modelo de Bruggeman.
 Nfun(108)=cellstr('looyenga3m(indiceSi5(lambda),n1,n2,P1,P2)');   %Silicio Poroso lleno con dos materiales de indices n1 y n2 con fracciones en volumen P1 y P2. Se usa el modelo de Bruggeman.
@@ -198,7 +198,7 @@ Nfun(109)=cellstr('maxwell(indiceSi5(lambda),n1,P1)');        	%Silicio Poroso l
 Nfun(110)=cellstr('maxwell_cil(indiceSi5(lambda),n1,P1)');        	%Silicio Poroso lleno con un material de indice n1 con porosidad P1. Se usa el modelo de Maxwell.
 
 
-%%%%%%%%%%%%%%%%%%%% COMIENZA EL CÁLCULO %%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%% COMIENZA EL CÃLCULO %%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 tic
@@ -216,7 +216,7 @@ else
     lambda=[lambdai lambda0];
 end
 
-%calculo el indice de refraccion para cada capa de diferente composición
+%calculo el indice de refraccion para cada capa de diferente composiciÃ³n
 aux=sort(Medios);
 aux=aux([1 1+find(abs(diff(aux))>0)]);
 for j=1:length(aux)
@@ -226,8 +226,8 @@ end
 
 
 %construyo el vector de espesores que tiene en cuenta si se elige un valor
-%de espesor óptico de 1/4 de la longitud de onda de referencia (el indice
-%de refracion a esta long de onda es calculado en el último punto del vector N)
+%de espesor Ã³ptico de 1/4 de la longitud de onda de referencia (el indice
+%de refracion a esta long de onda es calculado en el Ãºltimo punto del vector N)
 %Este calculo lo realiza para cada espesor de capa que sea negativo (es la
 %manera de indicarle al programa que ese espesor debe ser calculado como
 %1/4 de lambda0.
@@ -250,7 +250,7 @@ if length(delta)~=length(Medios)-1
     return
 end
 
-%En esta seccion elimina las capas que son de medios idénticos consecutivos
+%En esta seccion elimina las capas que son de medios idÃ©nticos consecutivos
 %para disminuir el tiempo de calculo.
 if Eliminacapas==1
     cont=1;
@@ -278,8 +278,8 @@ if Eliminacapas==1
     Nmed=size(Medios,2);
 end
 
-%El programa da un mensaje de error y no realiza el cálculo si una rugosidad elegida es mayor que el
-%espesor de una de las capas a un lado de la interfase en cuestión.
+%El programa da un mensaje de error y no realiza el cÃ¡lculo si una rugosidad elegida es mayor que el
+%espesor de una de las capas a un lado de la interfase en cuestiÃ³n.
 if rugosidad==1
     for l=1:length(d)
         if Ndelta*(delta(l)+delta(l+1))>= d(l);
@@ -303,9 +303,9 @@ end
 %convierto a radianes
 teta=teta/180*pi;
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%% Realizo el cálculo %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%% Realizo el cÃ¡lculo %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 for j=1:Npl
-    %creo el vector de indices de refracción para cada longitud de onda
+    %creo el vector de indices de refracciÃ³n para cada longitud de onda
     %elegida
     for k=1:Nmed
         Nl(k)=N(Medios(k),j);
@@ -348,7 +348,7 @@ end
 %matriz.
 I=squeeze(I);
 
-%si se elijió graficar las multicapas se hace el grafico
+%si se elijiÃ³ graficar las multicapas se hace el grafico
 if GraficaMulticapa==1
     %dibuja el perfil de indices de refraccion para la longitud de onda de
     %referencia
@@ -409,7 +409,7 @@ toc
         xlabel('Longitud de onda [nm]')
         ylabel('Posicion en la microcavidad [\mu m]')
         zlabel('Cociente de intensidades')
-        title('Campo eléctrico dentro de la multicapa')
+        title('Campo elÃ©ctrico dentro de la multicapa')
         shading flat
         
         %dibuja el campo electrico en la microcavidad para la longitud de onda de
@@ -444,7 +444,7 @@ if Npl==1
     xlabel('Angulo de incidencia')
     ylabel('Reflectancia [%]')
     %legend('R ', 'T ','Abs')
-    title("Curva teórica tipo TAMM")
+    title("Curva teÃ³rica tipo TAMM")
     ylim([45 100])
     
     if CalculodeCampo==1
@@ -476,7 +476,7 @@ if Npl==1
     end
 end
 
-%si tenemos mas de un teta y lambda dibujo en función de ambos
+%si tenemos mas de un teta y lambda dibujo en funciÃ³n de ambos
 if and(Npl>1,Npt>1)
     teta=teta*180/pi;     %convierto a grados
     
@@ -504,7 +504,7 @@ end
 
 end
 
-%Definiciones de funciones usadas en el cálculo
+%Definiciones de funciones usadas en el cÃ¡lculo
 
 function n = epstein(n1,n2,deltaep,z,z0)
 
@@ -560,17 +560,17 @@ end
 
 function [R,T,I]=campo5(N,d,lambda,teta,p,n)
 %calculo de la reflectancia de una serie de capas dielectricas
-%Tenemos Nc capas dielectricas de indice de refracción N(i). Este indice
+%Tenemos Nc capas dielectricas de indice de refracciÃ³n N(i). Este indice
 %tiene partes real e imaginaria.
 %en este caso para el calculo del campo se divide cada capa dielectrica en
 %n partes iguales y se calcula el campo en cada una de ellas.
 %teta puede ser vector. En ese
 %caso R y T seran vectores e I sera una matriz. El valor de p indica si la
-%polarización es s (p=0) o p (p=1). En esta version se aceptan valores
+%polarizaciÃ³n es s (p=0) o p (p=1). En esta version se aceptan valores
 %intermedios de p.
 
 if p>0
-    %calculo para polarización p
+    %calculo para polarizaciÃ³n p
     for m=1:length(teta)
 
         Nc=size(N,2);
@@ -590,7 +590,7 @@ if p>0
             %calculo los angulos teta dentro de cada dielectrico usando la ley de
             %Snell
             %Para evitar problemas con el tratamiento de los angulos complejos
-            %durante la reflexion total interna usamos el cálculo de los cosenos de
+            %durante la reflexion total interna usamos el cÃ¡lculo de los cosenos de
             %teta.
 
             costeta(j)=(1-(N(j-1)./N(j))^2*(1-costeta(j-1)^2))^0.5;
@@ -648,7 +648,7 @@ end
 
 
 if p<1
-    %calculo para polarización s
+    %calculo para polarizaciÃ³n s
     for m=1:length(teta)
 
         Nc=size(N,2);
@@ -668,7 +668,7 @@ if p<1
             %calculo los angulos teta dentro de cada dielectrico usando la ley de
             %Snell
             %Para evitar problemas con el tratamiento de los angulos complejos
-            %durante la reflexion total interna usamos el cálculo de los cosenos de
+            %durante la reflexion total interna usamos el cÃ¡lculo de los cosenos de
             %teta.
 
             costeta(j)=(1-(N(j-1)./N(j))^2*(1-costeta(j-1)^2))^0.5;
@@ -733,8 +733,8 @@ end
 
 function [R,T,I]=campo2(N,d,lambda,teta,p,n)
 %calculo de la reflectancia de una serie de capas dielectricas
-%en esta version se solucionó el problema de la reflexion total de la
-%version 1. Tenemos Nc capas dielectricas de indice de refracción N(i). Este indice
+%en esta version se solucionÃ³ el problema de la reflexion total de la
+%version 1. Tenemos Nc capas dielectricas de indice de refracciÃ³n N(i). Este indice
 %tiene partes real e imaginaria.
 %en este caso para el calculo del campo se divide cada capa dielectrica en
 %n partes iguales y se calcula el campo en cada una de ellas.
@@ -761,7 +761,7 @@ for j=2:Nc-1
     %calculo los angulos teta dentro de cada dielectrico usando la ley de
     %Snell
     %Para evitar problemas con el tratamiento de los angulos complejos
-    %durante la reflexion total interna usamos el cálculo de los cosenos de
+    %durante la reflexion total interna usamos el cÃ¡lculo de los cosenos de
     %teta.
 
     costeta(j)=(1-(N(j-1)./N(j))^2*(1-costeta(j-1)^2))^0.5;
@@ -882,7 +882,7 @@ end
 %%%%%%%%%% Definiciones de funciones de indice de refraccion %%%%%%%%%%%%%%%%%%%%
 
 function N=dummy(lambda,n)
-%función que devuelve un indice de refracción constante
+%funciÃ³n que devuelve un indice de refracciÃ³n constante
 N=lambda*0+n;
 end
 
@@ -924,7 +924,7 @@ function N=indicealcohol(lambda)
 %funcion que devuelve el indice de refraccion  del alcohol ethilico
 %ver http://refractiveindex.info/
 
-lambda=lambda*1e6; %las formulas estan en micrómetros
+lambda=lambda*1e6; %las formulas estan en micrÃ³metros
 
 C1 = 1.35265;
 C2 = 0.00306;
@@ -976,7 +976,7 @@ end
 function N=Al2O3amorfilm(lambda)
 %indice de refraccion de la alumina obtenida por deposicion 
 
-% REFERENCES: "R. Boidin, T. Halenkovi?, V. Nazabal, L. Beneš, P. N?mec. Pulsed laser deposited alumina thin films, <a href=\"http://dx.doi.org/10.1016/j.ceramint.2015.09.048\"><i>Ceramics International</i> <b>42</b>, 1177-1182 (2016)</a> (Numerical data kindly provided by Tomáš Halenkovi?)"
+% REFERENCES: "R. Boidin, T. Halenkovi?, V. Nazabal, L. BeneÂš, P. N?mec. Pulsed laser deposited alumina thin films, <a href=\"http://dx.doi.org/10.1016/j.ceramint.2015.09.048\"><i>Ceramics International</i> <b>42</b>, 1177-1182 (2016)</a> (Numerical data kindly provided by TomÃ¡Âš Halenkovi?)"
 % COMMENTS: "Thin films of amorphous alumina were fabricated using pulsed laser deposition in vacuum.<br>Influence of deposition parameters, specifically deposition time under vacuum and partial pressure of argon, is discussed in the original publication."
 % DATA:
 
@@ -1105,7 +1105,7 @@ end
 function N=indicePET(lambda)
 %funcion que devuelve el indice de refraccion real e imaginario del PET (polietilentereftalato). Interpola los valores de las tablas provistas por Sopra (ver
 %http://www.filmetrics.com/refractive-index-database/PET/Estar-Melinex-Mylar
-% ver "Polarimetric characterization of optically anisotropic flexible substrates Thin Solid Films 516 (2008) 1414–1418"
+% ver "Polarimetric characterization of optically anisotropic flexible substrates Thin Solid Films 516 (2008) 1414Â–1418"
 
 longda=1e-9*[400 400.47	401.23	401.98	402.73	403.48	404.24	404.99	405.74	406.5	407.25	408	408.75	409.5	410.26	411.01	411.76	412.51	413.26	414.02	414.77	415.52	416.27	417.02	417.77	418.52	419.27	420.02	420.78	421.53	422.28	423.03	423.78	424.53	425.28	426.03	426.78	427.53	428.28	429.03	429.78	430.53	431.28	432.03	432.78	433.53	434.28	435.02	435.77	436.52	437.27	438.02	438.77	439.52	440.27	441.01	441.76	442.51	443.26	444.01	444.76	445.5	446.25	447	447.75	448.49	449.24	449.99	450.74	451.48	452.23	452.98	453.72	454.47	455.22	455.96	456.71	457.46	458.2	458.95	459.7	460.44	461.19	461.94	462.68	463.43	464.17	464.92	465.66	466.41	467.15	467.9	468.65	469.39	470.14	470.88	471.63	472.37	473.11	473.86	474.6	475.35	476.09	476.84	477.58	478.33	479.07	479.81	480.56	481.3	482.04	482.79	483.53	484.27	485.02	485.76	486.5	487.25	487.99	488.73	489.48	490.22	490.96	491.7	492.45	493.19	493.93	494.67	495.41	496.16	496.9	497.64	498.38	499.12	499.86	500.61	501.35	502.09	502.83	503.57	504.31	505.05	505.79	506.53	507.28	508.02	508.76	509.5	510.24	510.98	511.72	512.46	513.2	513.94	514.68	515.42	516.16	516.9	517.64	518.37	519.11	519.85	520.59	521.33	522.07	522.81	523.55	524.29	525.02	525.76	526.5	527.24	527.98	528.72	529.45	530.19	530.93	531.67	532.41	533.14	533.88	534.62	535.36	536.09	536.83	537.57	538.3	539.04	539.78	540.51	541.25	541.99	542.72	543.46	544.2	544.93	545.67	546.4	547.14	547.88	548.61	549.35	550.08	550.82	551.55	552.29	553.02	553.76	554.49	555.23	555.96	556.7	557.43	558.17	558.9	559.64	560.37	561.11	561.84	562.57	563.31	564.04	564.78	565.51	566.24	566.98	567.71	568.44	569.18	569.91	570.64	571.38	572.11	572.84	573.57	574.31	575.04	575.77	576.51	577.24	577.97	578.7	579.43	580.17	580.9	581.63	582.36	583.09	583.82	584.56	585.29	586.02	586.75	587.48	588.21	588.94	589.67	590.4	591.14	591.87	592.6	593.33	594.06	594.79	595.52	596.25	596.98	597.71	598.44	599.17	599.9	600.63	601.36	602.08	602.81	603.54	604.27	605	605.73	606.46	607.19	607.92	608.64	609.37	610.1	610.83	611.56	612.29	613.01	613.74	614.47	615.2	615.93	616.65	617.38	618.11	618.84	619.56	620.29	621.02	621.74	622.47	623.2	623.92	624.65	625.38	626.1	626.83	627.56	628.28	629.01	629.73	630.46	631.19	631.91	632.64	633.36	634.09	634.81	635.54	636.27	636.99	637.72	638.44	639.17	639.89	640.61	641.34	642.06	642.79	643.51	644.24	644.96	645.69	646.41	647.13	647.86	648.58	649.3	650.03	650.75	651.47	652.2	652.92	653.64	654.37	655.09	655.81	656.54	657.26	657.98	658.7	659.43	660.15	660.87	661.59	662.32	663.04	663.76	664.48	665.2	665.92	666.65	667.37	668.09	668.81	669.53	670.25	670.97	671.69	672.41	673.14	673.86	674.58	675.3	676.02	676.74	677.46	678.18	678.9	679.62	680.34	681.06	681.78	682.5	683.22	683.94	684.66	685.38	686.09	686.81	687.53	688.25	688.97	689.69	690.41	691.13	691.84	692.56	693.28	694	694.72	695.44	696.15	696.87	697.59	698.31	699.02	699.74	700];
 n=[1.69295	1.6927	1.6922	1.6918	1.6914	1.691	1.6906	1.6902	1.6898	1.6894	1.689	1.6886	1.6882	1.6878	1.6874	1.687	1.6866	1.6863	1.6859	1.6855	1.6852	1.6848	1.6844	1.6841	1.6837	1.6834	1.683	1.6827	1.6823	1.682	1.6816	1.6813	1.681	1.6806	1.6803	1.68	1.6797	1.6793	1.679	1.6787	1.6784	1.6781	1.6778	1.6775	1.6771	1.6768	1.6765	1.6762	1.6759	1.6756	1.6754	1.6751	1.6748	1.6745	1.6742	1.6739	1.6736	1.6734	1.6731	1.6728	1.6725	1.6723	1.672	1.6717	1.6714	1.6712	1.6709	1.6707	1.6704	1.6701	1.6699	1.6696	1.6694	1.6691	1.6689	1.6686	1.6684	1.6681	1.6679	1.6676	1.6674	1.6672	1.6669	1.6667	1.6665	1.6662	1.666	1.6658	1.6655	1.6653	1.6651	1.6649	1.6646	1.6644	1.6642	1.664	1.6638	1.6635	1.6633	1.6631	1.6629	1.6627	1.6625	1.6623	1.6621	1.6619	1.6617	1.6615	1.6613	1.6611	1.6609	1.6607	1.6605	1.6603	1.6601	1.6599	1.6597	1.6595	1.6593	1.6591	1.6589	1.6587	1.6585	1.6584	1.6582	1.658	1.6578	1.6576	1.6575	1.6573	1.6571	1.6569	1.6567	1.6566	1.6564	1.6562	1.656	1.6559	1.6557	1.6555	1.6554	1.6552	1.655	1.6549	1.6547	1.6545	1.6544	1.6542	1.6541	1.6539	1.6537	1.6536	1.6534	1.6533	1.6531	1.6529	1.6528	1.6526	1.6525	1.6523	1.6522	1.652	1.6519	1.6517	1.6516	1.6514	1.6513	1.6512	1.651	1.6509	1.6507	1.6506	1.6504	1.6503	1.6502	1.65	1.6499	1.6497	1.6496	1.6495	1.6493	1.6492	1.6491	1.6489	1.6488	1.6487	1.6485	1.6484	1.6483	1.6481	1.648	1.6479	1.6477	1.6476	1.6475	1.6474	1.6472	1.6471	1.647	1.6469	1.6467	1.6466	1.6465	1.6464	1.6463	1.6461	1.646	1.6459	1.6458	1.6457	1.6455	1.6454	1.6453	1.6452	1.6451	1.645	1.6448	1.6447	1.6446	1.6445	1.6444	1.6443	1.6442	1.6441	1.6439	1.6438	1.6437	1.6436	1.6435	1.6434	1.6433	1.6432	1.6431	1.643	1.6429	1.6428	1.6427	1.6426	1.6425	1.6424	1.6423	1.6422	1.6421	1.642	1.6419	1.6418	1.6417	1.6416	1.6415	1.6414	1.6413	1.6412	1.6411	1.641	1.6409	1.6408	1.6407	1.6406	1.6405	1.6404	1.6403	1.6402	1.6401	1.64	1.6399	1.6398	1.6398	1.6397	1.6396	1.6395	1.6394	1.6393	1.6392	1.6391	1.639	1.639	1.6389	1.6388	1.6387	1.6386	1.6385	1.6384	1.6383	1.6383	1.6382	1.6381	1.638	1.6379	1.6378	1.6378	1.6377	1.6376	1.6375	1.6374	1.6374	1.6373	1.6372	1.6371	1.637	1.637	1.6369	1.6368	1.6367	1.6366	1.6366	1.6365	1.6364	1.6363	1.6363	1.6362	1.6361	1.636	1.636	1.6359	1.6358	1.6357	1.6357	1.6356	1.6355	1.6354	1.6354	1.6353	1.6352	1.6351	1.6351	1.635	1.6349	1.6349	1.6348	1.6347	1.6347	1.6346	1.6345	1.6344	1.6344	1.6343	1.6342	1.6342	1.6341	1.634	1.634	1.6339	1.6338	1.6338	1.6337	1.6336	1.6336	1.6335	1.6334	1.6334	1.6333	1.6332	1.6332	1.6331	1.6331	1.633	1.6329	1.6329	1.6328	1.6327	1.6327	1.6326	1.6326	1.6325	1.6324	1.6324	1.6323	1.6322	1.6322	1.6321	1.6321	1.632	1.6319	1.6319	1.6318	1.6318	1.6317	1.6317	1.6316	1.6315	1.6315	1.6314	1.6314	1.6313	1.6313	1.6312	1.6311	1.6311	1.631	1.631	1.6309	1.6309	1.6308	1.6308	1.6307	1.6306	1.6306	1.6305	1.6305	1.6304	1.6304	1.6303	1.6303	1.6302	1.6302	1.6301	1.6301	1.63	1.6299	1.6299];
@@ -1163,7 +1163,7 @@ end
 
 function N=TiO2film(lambda)
 %indice de refraccion del Titanium(IV) oxide (Titanium dioxide, TiO2) thin film (thickness 200 nm) on glass substrate.
-%S. Sarkar, V. Gupta, M. Kumar, J. Schubert, P.T. Probst, J. Joseph, T.A.F. König, Hybridized guided-mode resonances via colloidal plasmonic self-assembled grating, ACS Appl. Mater. Interfaces, 11, 13752-13760 (2019)
+%S. Sarkar, V. Gupta, M. Kumar, J. Schubert, P.T. Probst, J. Joseph, T.A.F. KÃ¶nig, Hybridized guided-mode resonances via colloidal plasmonic self-assembled grating, ACS Appl. Mater. Interfaces, 11, 13752-13760 (2019)
 %ver https://refractiveindex.info/?shelf=main&book=TiO2&page=Sarkar
 
 longdaexp=[0.3	0.301	0.302	0.303	0.304	0.305	0.306	0.307	0.308	0.309	0.31	0.311	0.312	0.313	0.314	0.315	0.316	0.317	0.318	0.319	0.32	0.321	0.322	0.323	0.324	0.325	0.326	0.327	0.328	0.329	0.33	0.331	0.332	0.333	0.334	0.335	0.336	0.337	0.338	0.339	0.34	0.341	0.342	0.343	0.344	0.345	0.346	0.347	0.348	0.349	0.35	0.351	0.352	0.353	0.354	0.355	0.356	0.357	0.358	0.359	0.36	0.361	0.362	0.363	0.364	0.365	0.366	0.367	0.368	0.369	0.37	0.371	0.372	0.373	0.374	0.375	0.376	0.377	0.378	0.379	0.38	0.381	0.382	0.383	0.384	0.385	0.386	0.387	0.388	0.389	0.39	0.391	0.392	0.393	0.394	0.395	0.396	0.397	0.398	0.399	0.4	0.401	0.402	0.403	0.404	0.405	0.406	0.407	0.408	0.409	0.41	0.411	0.412	0.413	0.414	0.415	0.416	0.417	0.418	0.419	0.42	0.421	0.422	0.423	0.424	0.425	0.426	0.427	0.428	0.429	0.43	0.431	0.432	0.433	0.434	0.435	0.436	0.437	0.438	0.439	0.44	0.441	0.442	0.443	0.444	0.445	0.446	0.447	0.448	0.449	0.45	0.451	0.452	0.453	0.454	0.455	0.456	0.457	0.458	0.459	0.46	0.461	0.462	0.463	0.464	0.465	0.466	0.467	0.468	0.469	0.47	0.471	0.472	0.473	0.474	0.475	0.476	0.477	0.478	0.479	0.48	0.481	0.482	0.483	0.484	0.485	0.486	0.487	0.488	0.489	0.49	0.491	0.492	0.493	0.494	0.495	0.496	0.497	0.498	0.499	0.5	0.501	0.502	0.503	0.504	0.505	0.506	0.507	0.508	0.509	0.51	0.511	0.512	0.513	0.514	0.515	0.516	0.517	0.518	0.519	0.52	0.521	0.522	0.523	0.524	0.525	0.526	0.527	0.528	0.529	0.53	0.531	0.532	0.533	0.534	0.535	0.536	0.537	0.538	0.539	0.54	0.541	0.542	0.543	0.544	0.545	0.546	0.547	0.548	0.549	0.55	0.551	0.552	0.553	0.554	0.555	0.556	0.557	0.558	0.559	0.56	0.561	0.562	0.563	0.564	0.565	0.566	0.567	0.568	0.569	0.57	0.571	0.572	0.573	0.574	0.575	0.576	0.577	0.578	0.579	0.58	0.581	0.582	0.583	0.584	0.585	0.586	0.587	0.588	0.589	0.59	0.591	0.592	0.593	0.594	0.595	0.596	0.597	0.598	0.599	0.6	0.601	0.602	0.603	0.604	0.605	0.606	0.607	0.608	0.609	0.61	0.611	0.612	0.613	0.614	0.615	0.616	0.617	0.618	0.619	0.62	0.621	0.622	0.623	0.624	0.625	0.626	0.627	0.628	0.629	0.63	0.631	0.632	0.633	0.634	0.635	0.636	0.637	0.638	0.639	0.64	0.641	0.642	0.643	0.644	0.645	0.646	0.647	0.648	0.649	0.65	0.651	0.652	0.653	0.654	0.655	0.656	0.657	0.658	0.659	0.66	0.661	0.662	0.663	0.664	0.665	0.666	0.667	0.668	0.669	0.67	0.671	0.672	0.673	0.674	0.675	0.676	0.677	0.678	0.679	0.68	0.681	0.682	0.683	0.684	0.685	0.686	0.687	0.688	0.689	0.69	0.691	0.692	0.693	0.694	0.695	0.696	0.697	0.698	0.699	0.7	0.701	0.702	0.703	0.704	0.705	0.706	0.707	0.708	0.709	0.71	0.711	0.712	0.713	0.714	0.715	0.716	0.717	0.718	0.719	0.72	0.721	0.722	0.723	0.724	0.725	0.726	0.727	0.728	0.729	0.73	0.731	0.732	0.733	0.734	0.735	0.736	0.737	0.738	0.739	0.74	0.741	0.742	0.743	0.744	0.745	0.746	0.747	0.748	0.749	0.75	0.751	0.752	0.753	0.754	0.755	0.756	0.757	0.758	0.759	0.76	0.761	0.762	0.763	0.764	0.765	0.766	0.767	0.768	0.769	0.77	0.771	0.772	0.773	0.774	0.775	0.776	0.777	0.778	0.779	0.78	0.781	0.782	0.783	0.784	0.785	0.786	0.787	0.788	0.789	0.79	0.791	0.792	0.793	0.794	0.795	0.796	0.797	0.798	0.799	0.8	0.801	0.802	0.803	0.804	0.805	0.806	0.807	0.808	0.809	0.81	0.811	0.812	0.813	0.814	0.815	0.816	0.817	0.818	0.819	0.82	0.821	0.822	0.823	0.824	0.825	0.826	0.827	0.828	0.829	0.83	0.831	0.832	0.833	0.834	0.835	0.836	0.837	0.838	0.839	0.84	0.841	0.842	0.843	0.844	0.845	0.846	0.847	0.848	0.849	0.85	0.851	0.852	0.853	0.854	0.855	0.856	0.857	0.858	0.859	0.86	0.861	0.862	0.863	0.864	0.865	0.866	0.867	0.868	0.869	0.87	0.871	0.872	0.873	0.874	0.875	0.876	0.877	0.878	0.879	0.88	0.881	0.882	0.883	0.884	0.885	0.886	0.887	0.888	0.889	0.89	0.891	0.892	0.893	0.894	0.895	0.896	0.897	0.898	0.899	0.9	0.901	0.902	0.903	0.904	0.905	0.906	0.907	0.908	0.909	0.91	0.911	0.912	0.913	0.914	0.915	0.916	0.917	0.918	0.919	0.92	0.921	0.922	0.923	0.924	0.925	0.926	0.927	0.928	0.929	0.93	0.931	0.932	0.933	0.934	0.935	0.936	0.937	0.938	0.939	0.94	0.941	0.942	0.943	0.944	0.945	0.946	0.947	0.948	0.949	0.95	0.951	0.952	0.953	0.954	0.955	0.956	0.957	0.958	0.959	0.96	0.961	0.962	0.963	0.964	0.965	0.966	0.967	0.968	0.969	0.97	0.971	0.972	0.973	0.974	0.975	0.976	0.977	0.978	0.979	0.98	0.981	0.982	0.983	0.984	0.985	0.986	0.987	0.988	0.989	0.99	0.991	0.992	0.993	0.994	0.995	0.996	0.997	0.998	0.999	1	1.0025	1.005	1.0075	1.01	1.0125	1.015	1.0175	1.02	1.0225	1.025	1.0275	1.03	1.0325	1.035	1.0375	1.04	1.0425	1.045	1.0475	1.05	1.0525	1.055	1.0575	1.06	1.0625	1.065	1.0675	1.07	1.0725	1.075	1.0775	1.08	1.0825	1.085	1.0875	1.09	1.0925	1.095	1.0975	1.1	1.1025	1.105	1.1075	1.11	1.1125	1.115	1.1175	1.12	1.1225	1.125	1.1275	1.13	1.1325	1.135	1.1375	1.14	1.1425	1.145	1.1475	1.15	1.1525	1.155	1.1575	1.16	1.1625	1.165	1.1675	1.17	1.1725	1.175	1.1775	1.18	1.1825	1.185	1.1875	1.19	1.1925	1.195	1.1975	1.2	1.2025	1.205	1.2075	1.21	1.2125	1.215	1.2175	1.22	1.2225	1.225	1.2275	1.23	1.2325	1.235	1.2375	1.24	1.2425	1.245	1.2475	1.25	1.2525	1.255	1.2575	1.26	1.2625	1.265	1.2675	1.27	1.2725	1.275	1.2775	1.28	1.2825	1.285	1.2875	1.29	1.2925	1.295	1.2975	1.3	1.3025	1.305	1.3075	1.31	1.3125	1.315	1.3175	1.32	1.3225	1.325	1.3275	1.33	1.3325	1.335	1.3375	1.34	1.3425	1.345	1.3475	1.35	1.3525	1.355	1.3575	1.36	1.3625	1.365	1.3675	1.37	1.3725	1.375	1.3775	1.38	1.3825	1.385	1.3875	1.39	1.3925	1.395	1.3975	1.4	1.4025	1.405	1.4075	1.41	1.4125	1.415	1.4175	1.42	1.4225	1.425	1.4275	1.43	1.4325	1.435	1.4375	1.44	1.4425	1.445	1.4475	1.45	1.4525	1.455	1.4575	1.46	1.4625	1.465	1.4675	1.47	1.4725	1.475	1.4775	1.48	1.4825	1.485	1.4875	1.49	1.4925	1.495	1.4975	1.5	1.5025	1.505	1.5075	1.51	1.5125	1.515	1.5175	1.52	1.5225	1.525	1.5275	1.53	1.5325	1.535	1.5375	1.54	1.5425	1.545	1.5475	1.55	1.5525	1.555	1.5575	1.56	1.5625	1.565	1.5675	1.57	1.5725	1.575	1.5775	1.58	1.5825	1.585	1.5875	1.59	1.5925	1.595	1.5975	1.6	1.6025	1.605	1.6075	1.61	1.6125	1.615	1.6175	1.62	1.6225	1.625	1.6275	1.63	1.6325	1.635	1.6375	1.64	1.6425	1.645	1.6475	1.65	1.6525	1.655	1.6575	1.66	1.6625	1.665	1.6675	1.67	1.6725	1.675	1.6775	1.68	1.6825	1.685	1.6875	1.699]*1e-6;
@@ -1178,10 +1178,10 @@ end
 
 
 function N = MAPI_Forouhi(lambda)
-% Función que devuelve el índice de refracción y el coeficiente de
-% extinción de MAPI, encontrados con el MODELO DE FOROUHI-BLOOMER con 3 picos. Los
-% parámetros fueron obtenidos, a partir de el mejor ajuste del n y k de
-% Lin et al 2014 (función anterior a ésta)
+% FunciÃ³n que devuelve el Ã­ndice de refracciÃ³n y el coeficiente de
+% extinciÃ³n de MAPI, encontrados con el MODELO DE FOROUHI-BLOOMER con 3 picos. Los
+% parÃ¡metros fueron obtenidos, a partir de el mejor ajuste del n y k de
+% Lin et al 2014 (funciÃ³n anterior a Ã©sta)
 % 
 % En nm
 E=1240e-9./lambda;
@@ -1277,7 +1277,7 @@ end
 function N=EVA(lambda)
 %indice de refraccion del eva
 %Conventional ethylene-vinyl acetate (EVA) with high UV absorption. Room temperature.
-%M. R. Vogt, H. Schulte-Huxel, D. Hinken, H. Holst, M. Winter, S. Blankemeyer, R. Witteck, M. Köntges, K. Bothe, R. Brendel. Optical constants of UV transparent EVA and the impact on the PV module output power under realistic illumination, Energy Procedia 92, 523-530 (2016)
+%M. R. Vogt, H. Schulte-Huxel, D. Hinken, H. Holst, M. Winter, S. Blankemeyer, R. Witteck, M. KÃ¶ntges, K. Bothe, R. Brendel. Optical constants of UV transparent EVA and the impact on the PV module output power under realistic illumination, Energy Procedia 92, 523-530 (2016)
 
 longdaexp=[0.25	0.26	0.27	0.28	0.29	0.3	0.31	0.32	0.33	0.34	0.35	0.36	0.37	0.38	0.39	0.4	0.41	0.42	0.43	0.44	0.45	0.46	0.47	0.48	0.49	0.5	0.51	0.52	0.53	0.54	0.55	0.56	0.57	0.58	0.59	0.6	0.61	0.62	0.63	0.64	0.65	0.66	0.67	0.68	0.69	0.7	0.71	0.72	0.73	0.74	0.75	0.76	0.77	0.78	0.79	0.8	0.81	0.82	0.83	0.84	0.85	0.86	0.87	0.88	0.89	0.9	0.91	0.92	0.93	0.94	0.95	0.96	0.97	0.98	0.99	1	1.01	1.02	1.03	1.04	1.05	1.06	1.07	1.08	1.09	1.1	1.11	1.12	1.13	1.14	1.15	1.16	1.17	1.18	1.19	1.2	1.21	1.22	1.23	1.24	1.25	1.26	1.27	1.28	1.29	1.3	1.31	1.32	1.33	1.34	1.35	1.36	1.37	1.38	1.39	1.4	1.41	1.42	1.43	1.44	1.45	1.46	1.47	1.48	1.49	1.5	1.51	1.52	1.53	1.54	1.55	1.56	1.57	1.58	1.59	1.6	1.61	1.62	1.63	1.64	1.65	1.66	1.67	1.68	1.69	1.7	1.71	1.72	1.73	1.74	1.75	1.76	1.77	1.78	1.79	1.8	1.81	1.82	1.83	1.84	1.85	1.86	1.87	1.88	1.89	1.9	1.91	1.92	1.93	1.94	1.95	1.96	1.97	1.98	1.99	2	2.01	2.02	2.03	2.04	2.05	2.06	2.07	2.08	2.09	2.1	2.11	2.12	2.13	2.14	2.15	2.16	2.17	2.18	2.19	2.2	2.21	2.22	2.23	2.24	2.25	2.26	2.27	2.28	2.29	2.3	2.31	2.32	2.33	2.34	2.35	2.36	2.37	2.38	2.39	2.4	2.41	2.42	2.43	2.44	2.45	2.46	2.47	2.48	2.49	2.5]*1e-6;
 n=[1.562	1.555	1.549	1.543	1.538	1.533	1.529	1.525	1.522	1.519	1.517	1.514	1.512	1.51	1.508	1.507	1.505	1.504	1.503	1.502	1.501	1.5	1.499	1.498	1.497	1.496	1.496	1.495	1.494	1.494	1.493	1.493	1.492	1.492	1.491	1.491	1.49	1.49	1.49	1.489	1.489	1.489	1.488	1.488	1.488	1.488	1.487	1.487	1.487	1.487	1.487	1.486	1.486	1.486	1.486	1.486	1.486	1.485	1.485	1.485	1.485	1.485	1.485	1.485	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.482	1.482	1.482	1.482	1.482	1.482	1.482	1.482	1.482	1.482	1.482	1.482	1.482	1.482	1.482	1.482	1.482	1.482	1.482	1.482	1.482	1.482	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.481	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48	1.48];
@@ -1293,7 +1293,7 @@ end
 function N=EVA_UV(lambda)
 %indice de refraccion del eva
 %Ethylene-vinyl acetate (EVA) with enhanced UV transmission. Room temperature.
-%M. R. Vogt, H. Schulte-Huxel, D. Hinken, H. Holst, M. Winter, S. Blankemeyer, R. Witteck, M. Köntges, K. Bothe, R. Brendel. Optical constants of UV transparent EVA and the impact on the PV module output power under realistic illumination, Energy Procedia 92, 523-530 (2016)
+%M. R. Vogt, H. Schulte-Huxel, D. Hinken, H. Holst, M. Winter, S. Blankemeyer, R. Witteck, M. KÃ¶ntges, K. Bothe, R. Brendel. Optical constants of UV transparent EVA and the impact on the PV module output power under realistic illumination, Energy Procedia 92, 523-530 (2016)
 
 longdaexp=[0.25	0.26	0.27	0.28	0.29	0.3	0.31	0.32	0.33	0.34	0.35	0.36	0.37	0.38	0.39	0.4	0.41	0.42	0.43	0.44	0.45	0.46	0.47	0.48	0.49	0.5	0.51	0.52	0.53	0.54	0.55	0.56	0.57	0.58	0.59	0.6	0.61	0.62	0.63	0.64	0.65	0.66	0.67	0.68	0.69	0.7	0.71	0.72	0.73	0.74	0.75	0.76	0.77	0.78	0.79	0.8	0.81	0.82	0.83	0.84	0.85	0.86	0.87	0.88	0.89	0.9	0.91	0.92	0.93	0.94	0.95	0.96	0.97	0.98	0.99	1	1.01	1.02	1.03	1.04	1.05	1.06	1.07	1.08	1.09	1.1	1.11	1.12	1.13	1.14	1.15	1.16	1.17	1.18	1.19	1.2	1.21	1.22	1.23	1.24	1.25	1.26	1.27	1.28	1.29	1.3	1.31	1.32	1.33	1.34	1.35	1.36	1.37	1.38	1.39	1.4	1.41	1.42	1.43	1.44	1.45	1.46	1.47	1.48	1.49	1.5	1.51	1.52	1.53	1.54	1.55	1.56	1.57	1.58	1.59	1.6	1.61	1.62	1.63	1.64	1.65	1.66	1.67	1.68	1.69	1.7	1.71	1.72	1.73	1.74	1.75	1.76	1.77	1.78	1.79	1.8	1.81	1.82	1.83	1.84	1.85	1.86	1.87	1.88	1.89	1.9	1.91	1.92	1.93	1.94	1.95	1.96	1.97	1.98	1.99	2	2.01	2.02	2.03	2.04	2.05	2.06	2.07	2.08	2.09	2.1	2.11	2.12	2.13	2.14	2.15	2.16	2.17	2.18	2.19	2.2	2.21	2.22	2.23	2.24	2.25	2.26	2.27	2.28	2.29	2.3	2.31	2.32	2.33	2.34	2.35	2.36	2.37	2.38	2.39	2.4	2.41	2.42	2.43	2.44	2.45	2.46	2.47	2.48	2.49	2.5]*1e-6;
 n=[1.557	1.551	1.545	1.54	1.536	1.532	1.528	1.525	1.522	1.519	1.517	1.515	1.513	1.511	1.51	1.508	1.507	1.506	1.505	1.504	1.503	1.502	1.501	1.5	1.499	1.499	1.498	1.497	1.497	1.496	1.496	1.495	1.495	1.494	1.494	1.493	1.493	1.493	1.492	1.492	1.492	1.491	1.491	1.491	1.491	1.49	1.49	1.49	1.49	1.49	1.489	1.489	1.489	1.489	1.489	1.488	1.488	1.488	1.488	1.488	1.488	1.488	1.487	1.487	1.487	1.487	1.487	1.487	1.487	1.487	1.487	1.487	1.486	1.486	1.486	1.486	1.486	1.486	1.486	1.486	1.486	1.486	1.486	1.486	1.486	1.486	1.485	1.485	1.485	1.485	1.485	1.485	1.485	1.485	1.485	1.485	1.485	1.485	1.485	1.485	1.485	1.485	1.485	1.485	1.485	1.485	1.485	1.485	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.484	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483	1.483];
@@ -1313,8 +1313,8 @@ end
 %de direfentes sustancias
 
 function neff=looyenga(n1,n2,x2)
-%esta función calcula el indice de refracción efectivo a partir de los
-%índices de refracción de los componentes individuales y la fracción del
+%esta funciÃ³n calcula el indice de refracciÃ³n efectivo a partir de los
+%Ã­ndices de refracciÃ³n de los componentes individuales y la fracciÃ³n del
 %componente 2 utilizando el modelo de looyenga (Pag 117 W. Theis).
 
 e1=n1.^2;
@@ -1327,8 +1327,8 @@ neff=eeff.^0.5;
 end
 
 function neff=looyenga3m(n1,n2,n3,x2,x3)
-%esta funciï¿½n calcula el indice de refracciï¿½n efectivo a partir de los
-%ï¿½ndices de refracciï¿½n de los componentes individuales y la fracciï¿½n del
+%esta funciÃ¯Â¿Â½n calcula el indice de refracciÃ¯Â¿Â½n efectivo a partir de los
+%Ã¯Â¿Â½ndices de refracciÃ¯Â¿Â½n de los componentes individuales y la fracciÃ¯Â¿Â½n del
 %componente 2 y 3 utilizando el modelo de looyenga (Pag 117 W. Theis).
 
 e1=n1.^2;
@@ -1342,8 +1342,8 @@ neff=eeff.^0.5;
 end
 
 function neff=looyengacil(n1,n2,x2)
-%esta función calcula el indice de refracción efectivo a partir de los
-%índices de refracción de los componentes individuales y la fracción del
+%esta funciÃ³n calcula el indice de refracciÃ³n efectivo a partir de los
+%Ã­ndices de refracciÃ³n de los componentes individuales y la fracciÃ³n del
 %componente 2 utilizando el modelo de looyenga (Pag 117 W. Theis) en el
 %caso de tener poros cilindricos.
 
@@ -1352,9 +1352,9 @@ neff=n1*(1-x2)+n2*x2;
 end
 
 function neff=mezclahomogenea(f1,n1,n2)
-%funcion que devuelve el indice de refraccion de una mezcla de líquidos
+%funcion que devuelve el indice de refraccion de una mezcla de lÃ­quidos
 %teniendo en cuenta la fraccion en volumen de cada componente y sus indices
-%de refracción. Esto corresponde al modelo de Lorentz-Lorenz
+%de refracciÃ³n. Esto corresponde al modelo de Lorentz-Lorenz
 %f1 es la fraccion en volumen del componente 1
 
 aux=f1*(n1.^2 - 1)./(n1.^2 + 2) + (1-f1)*(n2.^2 - 1)./(n2.^2 + 2);
@@ -1363,8 +1363,8 @@ neff=sqrt(-1-2*aux)./sqrt(aux-1);
 end
 
 function neff=maxwell(n1,n2,x2)
-%esta función calcula el indice de refracción efectivo a partir de los
-%índices de refracción de los componentes individuales y la fracción del
+%esta funciÃ³n calcula el indice de refracciÃ³n efectivo a partir de los
+%Ã­ndices de refracciÃ³n de los componentes individuales y la fracciÃ³n del
 %componente 2 utilizando el modelo de Maxwell Garnett (Pag 117 W. Theis).
 
 e1=n1.^2;
@@ -1375,8 +1375,8 @@ neff=eeff.^0.5;
 end
 
 function neff=Bruggeman(n1,n2,x2)
-%esta función calcula el indice de refracción efectivo a partir de los
-%índices de refracción de los componentes individuales y la fracción del
+%esta funciÃ³n calcula el indice de refracciÃ³n efectivo a partir de los
+%Ã­ndices de refracciÃ³n de los componentes individuales y la fracciÃ³n del
 %componente 2 utilizando el modelo de Bruggeman(Pag 117 W. Theis).
 
 e1=n1.^2;
