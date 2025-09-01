@@ -1,0 +1,535 @@
+% 1- Codigo para calcular la tramitancia y la refelctancia de una onda electromagnetica al cambiar de medio. 
+% 2- Este codigo solo funciona para incidencia normal y calculando E mode.
+
+% INITIALIZE MATLAB
+close all;
+clc;
+clear all;
+
+% UNITS
+degrees     = pi/180;
+meters      = 1;
+centimeters = 1e-2 * meters;
+millimeters = 1e-3 * meters;
+micrometers = 1e-6 * meters;
+nanometers  = 1e-9 * meters;
+inches      = 2.54 * centimeters;
+feet        = 12 * inches;
+seconds     = 1;
+hertz       = 1/seconds;
+kilohertz   = 1e3 * hertz;
+megahertz   = 1e6 * hertz;
+gigahertz   = 1e9 * hertz;
+terahertz   = 1e12 * hertz;
+petahertz   = 1e15 * hertz;
+
+% CONSTANTS
+e0 = 8.85418782e-12 * 1/meters;
+u0 = 1.25663706e-6 * 1/meters;
+N0 = sqrt(u0/e0);
+c0 = 299792458 * meters/seconds;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% DASHBOARD
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% WAVELENGTH (EMPTY SPACE)
+
+lam1 = 606 * nanometers;
+lam2 =  606 * nanometers;
+delta = 1 * nanometers;
+wavelength = lam1:delta:lam2;
+rep = 1;
+
+% FOR LATER ANALYSIS
+T = [];
+R = [];
+AA = [];
+
+% SWEEP
+for lam0 = wavelength
+
+    fprintf('------------------ LAMDA [nm] = %.1f ------------------\n',  lam0/nanometers); 
+    t_rep = [];
+    r_rep = [];
+    a_rep = [];
+
+    for times=1:rep
+        fprintf('Repeticion n° = %.1f\n',  times); 
+        
+        
+        % DEFINE PLANE WAVE SOURCE PARAMETERS
+        theta = 0*degrees;
+        f0 = c0/lam0;
+        k0    = 2*pi/lam0;
+        MODE  = 'E';
+
+        % POROSITIES, LAYERS AND THICKNESS
+        
+        % PHOTONIC CRYSTAL
+        P1 = 0.5;
+        P2 = 0.81;
+        L1 = 17;
+        L2 = 16;
+        h1 = 6.4401e-08;
+        h2 = 1.0238e-07;
+
+        % TOP LAYER
+        h_Ag = 55 * nanometers;       
+        w_Ag = 400 * nanometers;
+        rep_Ag = 3;
+        w_air = 200 * nanometers;
+        rep_air = 3;
+        
+        W = [w_Ag w_air];
+        H = [h1 h2 h_Ag];
+
+        % OTHER MEDIA PARAMETERS
+        width  = w_Ag*rep_Ag + w_air*rep_air;
+        h_air = max(H) * 15;
+        h_glass = max(H) * 15;
+        SPACER = [h_air h_glass];
+     
+        % REFRACTIVE INDECES
+        n_air = 1.00029;
+        n_Ag = Ag(lam0);
+        n_Si1 = n_Si_eff(lam0, P1);
+        n_Si2 = n_Si_eff(lam0, P2);
+        n_glass = BK7(lam0);
+        N = [n_air n_Ag n_Si1 n_Si2 n_glass];
+    
+        % ADD ROUGHNESS TO THE INTERFACE
+        roughness = false;
+        sigma = 4e-8;  
+    
+        % DEFINE FDFD PARAMETERS
+        NRES   = 80;
+        NPML   = [20 20];
+        nmax   = max(real(N));
+        er1 = n_air^2;
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %% CALCULATE OPTIMIZED GRID
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
+        % GRID RESOLUTION
+        dx = lam0/nmax/NRES;
+        dy = lam0/nmax/NRES;
+        
+        % SNAP GRID TO CRITICAL DIMENSIONS
+        nx = ceil(min(W)/dx);
+        dx = min(W)/nx;
+        
+        ny = ceil(min(H)/dy);
+        dy = min(H)/ny;
+        
+        % GRID SIZE
+        Sx = width;
+        Nx = ceil(Sx/dx);
+        Sx = Nx*dx;
+        
+        Sy = SPACER(1) + L1*h1 + L2*h2 + SPACER(2);
+        Ny = NPML(1) + ceil(Sy/dy) + NPML(2);
+        Sy = Ny*dy;
+        
+        % ZONE OF INTEGRATION (ZI) FOR R & T
+        y_ref = NPML (1) + round(round(h_air/dy)/2); 
+        y_trn = Ny - round(round(h_glass/dy)/2) - NPML(2);
+        
+        % 2X GRID
+        Nx2 = 2*Nx;             dx2 = dx/2;
+        Ny2 = 2*Ny;             dy2 = dy/2;
+        
+        % CALCULATE AXIS VECTORS
+        xa = [1:Nx]*dx;
+        ya = [1:Ny]*dy;
+        [Y,X] = meshgrid(ya,xa);
+        xa2 = [1:Nx2]*dx2;
+        ya2 = [1:Ny2]*dy2;
+        
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %% BUILD GEOMETRY
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
+        % INITIALIZE TO AIR
+        ER2 = er1*ones(Nx2,Ny2);
+        UR2 = ones(Nx2,Ny2);
+        
+        
+        % BUILD PHOTONIC CRYSTAL
+        Nh_air = 2*NPML(1) + round(h_air/dy2);
+        Nh_Ag = round(h_Ag/dy2);
+        
+
+        EPSx = LayerWithHoles(n_Ag, n_air, rep_Ag, rep_air, w_Ag, w_air, dx2);
+        [xx,yy] = size(UR2);
+        for i=0:abs(xx-length(EPSx))
+            EPSx(length(EPSx)+i) = EPSx(end);
+        end
+        for idx = 1:(xx)
+            ER2(idx,(Nh_air + 1):(Nh_air + 1 + Nh_Ag)) = EPSx(idx);
+        end
+
+        EPSy = PhCrist(n_Si1,n_Si2,L1,L2,h1,h2,dy2);
+        start_idx = 2*NPML(1) + round(h_air/dy2) + Nh_Ag;
+        for idx = 1:length(EPSy)
+            ER2(:,start_idx + idx) = EPSy(idx);
+        end
+        
+        end_idx = start_idx + length(EPSy);
+        Nh_glass = round(h_glass/dy2) + 2*NPML(2);
+        ER2(:, (end_idx + 1):end) = n_glass^2;
+    
+        % SHOW BOTH MEDIUMS AND ZI
+        if length(wavelength)==1 & times ==1
+            subplot(131);
+            imagesc(xa2,ya2,real(ER2).');
+            axis equal tight;
+            colorbar;
+            xlabel('Eje X [m]');
+            ylabel('Eje Y [m]');
+            title('Er DEL MEDIO');
+            hold on;
+            y_ref_pos = ya(y_ref);   
+            y_trn_pos = ya(y_trn);   
+            line([min(xa2) max(xa2)], [y_ref_pos y_ref_pos], 'Color','k','LineWidth',1.5);
+            line([min(xa2) max(xa2)], [y_trn_pos y_trn_pos], 'Color','k','LineWidth',1.5);
+            
+            % DEFINE THE GRAPGH'S COLORS
+            n = 256; 
+            cmap = interp1([0 0.33 0.66 1], ... 
+                [0 0 0.5;  
+                 0.8 0 0.5; 
+                 1 0.4 0;   
+                 1 1 0], ... 
+                linspace(0,1,n));
+
+            colormap(cmap);
+            hold off
+        end
+
+        % INCORPORATE PML
+        [ERxx,ERyy,ERzz,URxx,URyy,URzz] ...
+                            = addupml2d(ER2,UR2,[0 0 NPML]);
+
+        % DIAGONALIZE MATERIAL TENSORS
+        ERxx = diag(sparse(ERxx(:)));
+        ERyy = diag(sparse(ERyy(:)));
+        ERzz = diag(sparse(ERzz(:)));
+        URxx = diag(sparse(URxx(:)));
+        URyy = diag(sparse(URyy(:)));
+        URzz = diag(sparse(URzz(:)));
+
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %% PERFORM FDFD ANALYSIS
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+        % INCIDENT WAVE VECTOR
+        nsrc  = sqrt(UR2(1,1)*ER2(1,1));
+        kxinc = k0*nsrc*sin(theta);
+        kyinc = k0*nsrc*cos(theta);
+        kinc  = [ kxinc ; kyinc ];
+
+        % BUILD DERIVATIVE MATRICES
+        NS  = [Nx Ny];
+        RES = [dx dy];
+        BC  = [1 0];
+        [DEX,DEY,DHX,DHY] = yeeder2d(NS,k0*RES,BC,kinc/k0);
+
+        % BUILD WAVE MATRIX
+        if MODE == 'E'
+            A = DHX/URyy*DEX + DHY/URxx*DEY + ERzz;
+        else
+            A = DEX/ERyy*DHX + DEY/ERxx*DHY + URzz;
+        end
+
+        % CALCULATE SOURCE FIELD
+        fsrc  = exp(-1i*(kxinc*X + kyinc*Y));
+
+        % CALCULATE SCATTERED-FIELD MASKING MATRIX
+        ny = NPML(1) + 2;
+        Q  = zeros(Nx,Ny);
+        Q(:,1:ny) = 1;
+        Q  = diag(sparse(Q(:)));
+
+        % CALCULATE SOURCE VECTOR
+        b = (Q*A - A*Q)*fsrc(:);
+
+        % SOLVE FOR FIELD
+        f = A\b;
+        f = reshape(f,Nx,Ny);
+
+        % SHOW TOTAL FIELD
+        if length(wavelength)==1 & times==1
+            subplot(132);
+            pcolor(xa,ya,real(f).');
+            shading interp;
+            axis equal tight;
+            set(gca,'YDir','reverse');
+            caxis([-1 1]);
+            colorbar;
+            xlabel('Eje X [m]');
+            ylabel('Eje Y [m]');
+            title('R(Ez)');
+            colormap(cmap);
+        end
+
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %% TRANSMITTANCE AND REFRECTANCE
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+        if theta==0
+            % EXTRACT MATERIAL PROPERTIES IN EXTERNAL REGIONS
+            urref = UR2(1,1);
+            urtrn = UR2(1,Ny2);
+            erref = ER2(1,1);
+            ertrn = ER2(1,Ny2);
+            nref  = sqrt(urref*erref);
+            ntrn  = sqrt(urtrn*ertrn);
+
+            % TOTAL, SOURCE AND SCATTERED FIELDS
+            Ez_tot  = f;        
+            Ez_inc  = fsrc;     
+            Ez_scat = Ez_tot - Ez_inc;
+            
+            %SHOW SCATTERED FIELD
+            if length(wavelength)==1 & times==1
+                subplot(133);
+                pcolor(xa,ya,real(Ez_scat).');
+                shading interp;
+                axis equal tight;
+                set(gca,'YDir','reverse');
+                caxis([-1 1]);
+                colorbar;
+                xlabel('Eje X [m]');
+                ylabel('Eje Y [m]');
+                title('R(Ez_{sct})');
+                colormap(cmap);
+            end
+
+            % PARTIAL DERIVATIVES OF Ez
+            [Ezy_tot, Ezx_tot]   = gradient(Ez_tot, dy, dx); 
+            [Ezy_inc, Ezx_inc]   = gradient(Ez_inc, dy, dx);
+            [Ezy_scat,Ezx_scat]  = gradient(Ez_scat,dy, dx);
+
+            %CALCULATE MAGNETIC FIELDS
+            omega = 2*pi*f0;
+            Hx_tot  = -(1./(1i*omega*u0)) .* Ezy_tot;
+            Hx_inc  = -(1./(1i*omega*u0)) .* Ezy_inc;
+            Hx_scat = -(1./(1i*omega*u0)) .* Ezy_scat;
+
+            % POYTING FLUX IN EACH ZI
+            Sy_inc_line  = 0.5*real( Ez_inc(:, y_ref)  .* conj(Hx_inc(:,  y_ref)/urref) );  
+            Sy_ref_line  = 0.5*real( Ez_scat(:,y_ref)  .* conj(Hx_scat(:, y_ref)/urref) );
+            Sy_trn_line  = 0.5*real( Ez_tot(:, y_trn)  .* conj(Hx_tot(:,  y_trn)/urtrn) );
+
+            % POWER
+            P_inc = trapz(xa, Sy_inc_line);          
+            P_ref = -trapz(xa, Sy_ref_line);         
+            P_trn =  trapz(xa, Sy_trn_line);  
+
+            % TRANSMITTANCE AND REFRECTANCE
+            r = real(P_ref / P_inc);
+            t = real(P_trn / P_inc);
+            a = 1 - t - r;
+
+            r_rep(end+1) = r;
+            t_rep(end+1) = t;
+            a_rep(end+1) = a;
+
+        end 
+    end
+
+    R(end+1) = mean(r_rep);
+    T(end+1) =  mean(t_rep);
+    AA(end+1) = mean(a_rep);
+
+    fprintf('Reflectancia  R = %.4f\n',  mean(r_rep));
+    fprintf('Transmitancia T = %.4f\n',  mean(t_rep));
+    fprintf('Absorbancia A = %.4f\n',  mean(a_rep)); 
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% PLOT TRANSMITTANCE AND REFRECTANCE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if length(wavelength) ~= 1
+    figure(10)
+    hold on
+    plot(wavelength * 1/nanometers, R*100, '.-', 'LineWidth', 1,'Color',[0.45 0 0.75]); hold on;
+    plot(wavelength * 1/nanometers, T*100, '.-', 'LineWidth', 1,'Color',[0 0.75 0.75]); hold on;
+    plot(wavelength * 1/nanometers, AA*100,'.-', 'LineWidth', 1,'Color',[1 0 1])
+    xlabel('Longitud de onda [nm]');      
+    ylabel('R y T porcentual'); 
+    title('Reflectancia y Transmitancia vs Longitud de onda');
+    grid on;
+    ylim([0 105]);
+    legend({'R (Reflectancia)','T (Transmitancia)', 'A (Absrobancia)'}, 'Location','best');   
+end
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% DEFINE FUNCTIONS                                     
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function N = indiceSi5(lambda)
+%http://refractiveindex.info/index.php?group=CRYSTALS&material=Si&option=so
+%pra&wavelength=0.8266)
+
+longda=[1.63138E-7	1.63569E-7	1.64002E-7	1.64437E-7	1.64874E-7	1.65314E-7	1.65756E-7	1.662E-7	1.66647E-7	1.67096E-7	1.67548E-7	1.68002E-7	1.68458E-7	1.68917E-7	1.69379E-7	1.69843E-7	1.70309E-7	1.70778E-7	1.7125E-7	1.71725E-7	1.72202E-7	1.72681E-7	1.73164E-7	1.73649E-7	1.74136E-7	1.74627E-7	1.7512E-7	1.75616E-7	1.76115E-7	1.76617E-7	1.77122E-7	1.77629E-7	1.7814E-7	1.78653E-7	1.79169E-7	1.79689E-7	1.80211E-7	1.80736E-7	1.81265E-7	1.81796E-7	1.82331E-7	1.82869E-7	1.8341E-7	1.83954E-7	1.84502E-7	1.85053E-7	1.85607E-7	1.86164E-7	1.86725E-7	1.87289E-7	1.87856E-7	1.88427E-7	1.89002E-7	1.8958E-7	1.90161E-7	1.90746E-7	1.91335E-7	1.91928E-7	1.92524E-7	1.93123E-7	1.93727E-7	1.94334E-7	1.94945E-7	1.9556E-7	1.96179E-7	1.96802E-7	1.97429E-7	1.98059E-7	1.98694E-7	1.99333E-7	1.99976E-7	2.00623E-7	2.01275E-7	2.0193E-7	2.0259E-7	2.03254E-7	2.03923E-7	2.04596E-7	2.05273E-7	2.05955E-7	2.06642E-7	2.07333E-7	2.08029E-7	2.08729E-7	2.09434E-7	2.10144E-7	2.10859E-7	2.11579E-7	2.12303E-7	2.13033E-7	2.13768E-7	2.14507E-7	2.15252E-7	2.16002E-7	2.16757E-7	2.17518E-7	2.18284E-7	2.19055E-7	2.19832E-7	2.20614E-7	2.21402E-7	2.22196E-7	2.22995E-7	2.238E-7	2.24611E-7	2.25428E-7	2.2625E-7	2.27079E-7	2.27914E-7	2.28755E-7	2.29602E-7	2.30456E-7	2.31316E-7	2.32182E-7	2.33055E-7	2.33934E-7	2.3482E-7	2.35713E-7	2.36613E-7	2.3752E-7	2.38433E-7	2.39354E-7	2.40281E-7	2.41216E-7	2.42159E-7	2.43108E-7	2.44065E-7	2.4503E-7	2.46002E-7	2.46982E-7	2.4797E-7	2.48966E-7	2.4997E-7	2.50982E-7	2.52002E-7	2.53031E-7	2.54068E-7	2.55114E-7	2.56168E-7	2.57231E-7	2.58302E-7	2.59383E-7	2.60473E-7	2.61572E-7	2.6268E-7	2.63798E-7	2.64926E-7	2.66063E-7	2.67209E-7	2.68366E-7	2.69533E-7	2.7071E-7	2.71897E-7	2.73095E-7	2.74303E-7	2.75523E-7	2.76753E-7	2.77994E-7	2.79246E-7	2.80509E-7	2.81785E-7	2.83071E-7	2.8437E-7	2.8568E-7	2.87003E-7	2.88338E-7	2.89685E-7	2.91045E-7	2.92418E-7	2.93804E-7	2.95203E-7	2.96615E-7	2.98041E-7	2.99481E-7	3.00935E-7	3.02403E-7	3.03885E-7	3.05382E-7	3.06894E-7	3.08421E-7	3.09963E-7	3.11521E-7	3.13094E-7	3.14683E-7	3.16289E-7	3.17911E-7	3.19549E-7	3.21205E-7	3.22878E-7	3.24569E-7	3.26277E-7	3.28003E-7	3.29748E-7	3.31511E-7	3.33293E-7	3.35095E-7	3.36916E-7	3.38757E-7	3.40619E-7	3.42501E-7	3.44403E-7	3.46327E-7	3.48273E-7	3.50241E-7	3.52231E-7	3.54243E-7	3.56279E-7	3.58339E-7	3.60422E-7	3.6253E-7	3.64662E-7	3.6682E-7	3.69004E-7	3.71213E-7	3.73449E-7	3.75713E-7	3.78004E-7	3.80323E-7	3.8267E-7	3.85047E-7	3.87454E-7	3.89891E-7	3.92358E-7	3.94857E-7	3.97388E-7	3.99952E-7	4.02549E-7	4.0518E-7	4.07846E-7	4.10547E-7	4.13284E-7	4.16058E-7	4.18869E-7	4.21718E-7	4.24607E-7	4.27535E-7	4.30504E-7	4.33515E-7	4.36568E-7	4.39664E-7	4.42804E-7	4.4599E-7	4.49222E-7	4.52501E-7	4.55828E-7	4.59204E-7	4.62631E-7	4.6611E-7	4.69641E-7	4.73226E-7	4.76866E-7	4.80563E-7	4.84317E-7	4.88131E-7	4.92005E-7	4.95941E-7	4.9994E-7	5.04005E-7	5.08136E-7	5.12335E-7	5.16605E-7	5.20946E-7	5.25361E-7	5.29851E-7	5.34419E-7	5.39066E-7	5.43795E-7	5.48607E-7	5.53505E-7	5.58492E-7	5.63569E-7	5.68739E-7	5.74005E-7	5.7937E-7	5.84836E-7	5.90406E-7	5.96083E-7	6.0187E-7	6.0777E-7	6.13788E-7	6.19926E-7	6.26188E-7	6.32577E-7	6.39099E-7	6.45756E-7	6.52554E-7	6.59496E-7	6.66587E-7	6.73833E-7	6.81237E-7	6.88807E-7	6.96546E-7	7.04461E-7	7.12559E-7	7.20844E-7	7.29325E-7	7.38007E-7	7.46899E-7	7.56007E-7	7.65341E-7	7.74907E-7	7.84716E-7	7.94777E-7	8.05099E-7	8.15692E-7	8.26568E-7	8.37738E-7	8.49214E-7	8.61008E-7	8.73135E-7	8.85608E-7	8.98443E-7	9.11656E-7	9.25263E-7	9.39282E-7	9.53732E-7	9.68634E-7	9.84009E-7	9.9988E-7	1.01627E-6	1.03321E-6	1.05072E-6	1.06884E-6	1.08759E-6	1.10701E-6	1.12714E-6	1.14801E-6	1.16967E-6	1.19217E-6	1.21554E-6	1.23985E-6	1.26515E-6	1.29151E-6	1.31899E-6	1.34767E-6	1.37761E-6	1.40892E-6	1.44169E-6	1.47601E-6	1.51201E-6	1.54981E-6	1.58955E-6	1.63138E-6	1.67548E-6	1.72202E-6	1.77122E-6	1.82331E-6	1.87856E-6	1.93727E-6	1.99976E-6	2.06642E-6	2.13768E-6	2.21402E-6	2.29602E-6	2.38433E-6	2.4797E-6 25e-6];
+nSi=[0.52512	0.53294	0.54031	0.54727	0.55382	0.56	0.56583	0.57133	0.57652	0.58143	0.58608	0.59049	0.59469	0.5987	0.60254	0.60624	0.60982	0.61329	0.61669	0.62004	0.62336	0.62665	0.62996	0.63331	0.63675	0.64028	0.64389	0.64767	0.65164	0.65587	0.66045	0.66559	0.67109	0.67687	0.68287	0.68909	0.69549	0.70205	0.70874	0.71554	0.72238	0.72919	0.73602	0.7429	0.74982	0.75678	0.76373	0.77072	0.77778	0.78493	0.79217	0.79953	0.80702	0.81463	0.82238	0.83032	0.83851	0.84687	0.85537	0.86399	0.87271	0.88156	0.89048	0.89944	0.90839	0.91729	0.92603	0.93469	0.94333	0.95194	0.96052	0.969	0.97748	0.98636	0.99535	1.0035	1.00005	0.99525	0.99285	0.99656	1.01014	1.03522	1.04698	1.0655	1.0687	1.08037	1.09032	1.10141	1.10974	1.1188	1.13254	1.13911	1.15479	1.16458	1.17512	1.18589	1.19509	1.21069	1.22184	1.23471	1.24747	1.26525	1.28067	1.2984	1.31861	1.33997	1.36205	1.38926	1.41626	1.44469	1.47176	1.50138	1.52611	1.54821	1.56555	1.57855	1.58549	1.58987	1.5914	1.59189	1.5887	1.58614	1.58156	1.57829	1.57377	1.57107	1.56968	1.56882	1.56829	1.5689	1.57045	1.57495	1.57956	1.58427	1.59086	1.59704	1.60842	1.61756	1.62913	1.6432	1.65768	1.67327	1.69203	1.71318	1.73711	1.76411	1.7939	1.83134	1.8745	1.92745	1.98794	2.05927	2.14091	2.23435	2.33896	2.45173	2.57196	2.69982	2.83395	2.97449	3.12072	3.27712	3.44476	3.63446	3.85005	4.08699	4.31959	4.52564	4.6864	4.80472	4.88813	4.94119	4.97698	4.99945	5.01238	5.0196	5.02102	5.02014	5.0176	5.01459	5.01056	5.00866	5.0098	5.00902	5.01197	5.016	5.02156	5.02933	5.03963	5.05227	5.06495	5.07904	5.09542	5.11457	5.1345	5.15552	5.17913	5.20403	5.23097	5.26146	5.29565	5.33564	5.38341	5.44173	5.5149	5.60989	5.73358	5.89402	6.08828	6.30723	6.52147	6.69487	6.79634	6.8289	6.79788	6.70742	6.58566	6.45226	6.31582	6.18508	6.06231	5.94805	5.84163	5.74364	5.65376	5.56993	5.49236	5.42003	5.34916	5.28362	5.23397	5.17494	5.11914	5.06625	5.01599	4.9681	4.92238	4.87867	4.83684	4.79677	4.75835	4.72143	4.6859	4.65166	4.61864	4.58678	4.55608	4.52648	4.49797	4.47048	4.44393	4.41824	4.39332	4.36911	4.34556	4.32264	4.30034	4.27865	4.25754	4.237	4.21701	4.19754	4.17856	4.16005	4.14198	4.12435	4.10716	4.0904	4.07406	4.05814	4.04262	4.02748	4.0127	3.99829	3.98423	3.97051	3.9571	3.94399	3.93116	3.91857	3.90623	3.89307	3.88148	3.87026	3.85831	3.84675	3.83675	3.82573	3.8151	3.80537	3.79646	3.78732	3.77801	3.76841	3.76046	3.75218	3.74493	3.73629	3.72758	3.72091	3.71375	3.70525	3.69709	3.6877	3.68094	3.67186	3.6631	3.6548	3.64667	3.63873	3.6313	3.62484	3.6189	3.61328	3.60785	3.6025	3.597	3.59149	3.58602	3.58059	3.57517	3.5697	3.56424	3.55878	3.55334	3.54789	3.5424	3.53693	3.53151	3.52619	3.52099	3.51601	3.51117	3.50646	3.50186	3.49736	3.49292	3.48859	3.48438	3.48032	3.47641	3.47269	3.46914	3.46575	3.46254	3.4595	3.45664	3.45397	3.45141	3.44904	3.4471	3.44613	3.44548	3.44488	3.44406	3.44275 3.44275];
+kSi=[2.16784	2.17386	2.18009	2.18652	2.19316	2.2	2.20703	2.21424	2.22164	2.22921	2.23696	2.24487	2.25294	2.26117	2.26955	2.27808	2.28675	2.29555	2.30448	2.31354	2.32272	2.33202	2.34143	2.35094	2.36055	2.37025	2.38005	2.38992	2.39986	2.40985	2.41987	2.42986	2.43986	2.44993	2.46006	2.47026	2.48053	2.4909	2.50137	2.51198	2.52274	2.53371	2.54485	2.55613	2.56755	2.57912	2.59084	2.60269	2.61465	2.6267	2.63882	2.65099	2.66321	2.67549	2.68781	2.7002	2.71271	2.72524	2.73774	2.75016	2.76253	2.77491	2.78712	2.79907	2.81064	2.82163	2.83164	2.84106	2.85011	2.85885	2.86723	2.87506	2.88277	2.89108	2.89978	2.90763	2.90534	2.90138	2.89873	2.90035	2.9092	2.92833	2.94214	2.93903	2.96087	2.97983	2.98963	3.00348	3.01565	3.02508	3.04478	3.06055	3.07263	3.08631	3.1027	3.11962	3.13499	3.15008	3.16915	3.19007	3.20674	3.22793	3.24533	3.26703	3.28519	3.30158	3.31862	3.33442	3.34957	3.35933	3.36639	3.36856	3.36746	3.36375	3.35851	3.35286	3.34632	3.34426	3.34369	3.34714	3.35363	3.36306	3.37556	3.38949	3.40823	3.42925	3.45084	3.47687	3.50371	3.53349	3.56474	3.59785	3.63254	3.67001	3.70933	3.74919	3.78895	3.83512	3.88012	3.92858	3.97909	4.03148	4.08838	4.14868	4.21115	4.2781	4.35062	4.42619	4.5063	4.59051	4.67808	4.76457	4.84967	4.93322	5.01133	5.08196	5.14776	5.20607	5.25773	5.30401	5.34382	5.38063	5.41369	5.43532	5.43846	5.39494	5.29987	5.15633	4.98743	4.81095	4.63919	4.47989	4.33429	4.20392	4.08585	3.97912	3.8845	3.79821	3.72005	3.64962	3.58645	3.52886	3.4767	3.42926	3.3855	3.34602	3.30958	3.27515	3.2418	3.21103	3.18167	3.15405	3.12746	3.10259	3.07897	3.05762	3.03873	3.02096	3.00651	2.99489	2.98661	2.98257	2.98356	2.98909	2.99908	3.01434	3.02674	3.02214	2.98097	2.88014	2.70489	2.45554	2.16783	1.86846	1.57646	1.31987	1.10942	0.94458	0.81485	0.71379	0.62979	0.56103	0.50462	0.45556	0.4164	0.38795	0.35583	0.32828	0.31238	0.29126	0.27769	0.26065	0.24528	0.23142	0.21895	0.20773	0.19757	0.1882	0.17937	0.17088	0.16275	0.15511	0.14822	0.14221	0.13705	0.1324	0.12774	0.12255	0.11654	0.10976	0.1026	0.09561	0.08926	0.08381	0.07928	0.07549	0.07217	0.06903	0.06588	0.06261	0.05924	0.05588	0.05268	0.04976	0.04715	0.04478	0.04255	0.04038	0.03826	0.03625	0.03441	0.03278	0.03136	0.03013	0.02901	0.02795	0.02686	0.02574	0.02457	0.02336	0.02213	0.02147	0.01954	0.01771	0.01678	0.01636	0.01572	0.01495	0.01404	0.01347	0.01304	0.01251	0.01191	0.01137	0.01086	0.01045	0.00994	0.00934	0.00877	0.00823	0.00772	0.00719	0.00663	0.00612	0.00561	0.00529	0.00498	0.00469	0.00443	0.0042	0.00399	0.00378	0.00358	0.0034	0.00322	0.00303	0.00283	0.00262	0.00242	0.00224	0.0021	0.00204	0.00202	0.00201	0.00198	0.00193	0.00179	0.00161	0.00142	0.00121	9.99E-4	7.78E-4	5.62E-4	3.54E-4	1.69E-4	3.1E-5	1E-6	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0  0 ];
+
+aux=interp1(longda,nSi,lambda,'spline','extrap');
+aux2=interp1(longda,kSi,lambda,'spline','extrap');
+N=aux-1i*aux2;
+end
+
+function N_eff = n_Si_eff(lamda, p)
+
+n_Si = indiceSi5(lamda);
+n_air = 1.00029;
+N_eff = ((n_Si.^(2/3)) * (1 - p) + (n_air.^(2/3)) * p).^(3/2);
+
+end
+
+function N = BK7(lambda)
+%http://www-swiss.ai.mit.edu/~jaffer/FreeSnell/nk.html
+
+longdaexp=[1.90746E-7	1.93727E-7	1.96802E-7	1.99976E-7	2.03254E-7	2.06642E-7	2.10144E-7	2.13768E-7	2.17518E-7	2.21402E-7	2.25428E-7	2.29602E-7	2.33934E-7	2.38433E-7	2.43108E-7	2.4797E-7	2.53031E-7	2.58302E-7	2.63798E-7	2.69533E-7	2.75523E-7	2.81784E-7	2.88338E-7	2.95203E-7	3.02403E-7	3.09963E-7	3.17911E-7	3.26277E-7	3.35095E-7	3.44403E-7	3.54243E-7	3.64662E-7	3.75713E-7	3.87454E-7	3.99952E-7	4.13284E-7	4.27535E-7	4.42804E-7	4.59204E-7	4.76866E-7	4.95941E-7	5.16605E-7	5.39066E-7	5.63569E-7	5.90406E-7	6.19926E-7	6.52554E-7	6.88807E-7	7.29325E-7	7.74907E-7	8.26568E-7	8.85608E-7	9.53732E-7	1.03321E-6	1.12714E-6	1.23985E-6];
+n=[1.68543	1.67459	1.6645	1.65509	1.64632	1.63816	1.63056	1.62349	1.61689	1.61074	1.60499	1.59961	1.59457	1.58983	1.58538	1.58119	1.57722	1.57348	1.56993	1.56657	1.56337	1.56033	1.55743	1.55466	1.55201	1.54948	1.54705	1.54473	1.5425	1.54036	1.5383	1.53633	1.53443	1.53261	1.53085	1.52917	1.52755	1.526	1.5245	1.52307	1.52169	1.52036	1.51909	1.51786	1.51668	1.51554	1.51444	1.51337	1.51232	1.51129	1.51027	1.50924	1.50817	1.50705	1.50583	1.50444];
+
+N=interp1(longdaexp,n,lambda);
+
+end
+
+function N = Ag(lambda)
+%REFERENCES: "P. B. Johnson and R. W. Christy. Optical Constants of the Noble Metals, <a href=\"https://doi.org/10.1103/PhysRevB.6.4370\"><i>Phys. Rev. B</i> <b>6</b>, 4370-4379 (1972)</a>"
+%COMMENTS: "Room temperature"
+
+longdaexp=[0.1879	0.1916	0.1953	0.1993	0.2033	0.2073	0.2119	0.2164	0.2214	0.2262	0.2313	0.2371	0.2426	0.249	0.2551	0.2616	0.2689	0.2761	0.2844	0.2924	0.3009	0.3107	0.3204	0.3315	0.3425	0.3542	0.3679	0.3815	0.3974	0.4133	0.4305	0.4509	0.4714	0.4959	0.5209	0.5486	0.5821	0.6168	0.6595	0.7045	0.756	0.8211	0.892	0.984	1.088	1.216	1.393	1.61	1.937];
+n=[1.07	1.1	1.12	1.14	1.15	1.18	1.2	1.22	1.25	1.26	1.28	1.28	1.3	1.31	1.33	1.35	1.38	1.41	1.41	1.39	1.34	1.13	0.81	0.17	0.14	0.1	0.07	0.05	0.05	0.05	0.04	0.04	0.05	0.05	0.05	0.06	0.05	0.06	0.05	0.04	0.03	0.04	0.04	0.04	0.04	0.09	0.13	0.15	0.24];
+k=[1.212	1.232	1.255	1.277	1.296	1.312	1.325	1.336	1.342	1.344	1.357	1.367	1.378	1.389	1.393	1.387	1.372	1.331	1.264	1.161	0.964	0.616	0.392	0.829	1.142	1.419	1.657	1.864	2.07	2.275	2.462	2.657	2.869	3.093	3.324	3.586	3.858	4.152	4.483	4.838	5.242	5.727	6.312	6.992	7.795	8.828	10.1	11.85	14.08];
+auxn=interp1(longdaexp*1e-6,n,lambda,'linear','extrap');
+auxk=interp1(longdaexp*1e-6,k,lambda,'linear','extrap');
+
+N=auxn-1i*auxk;
+
+end
+
+function EPSy = PhCrist(n1,n2,layers1,layers2,h1,h2,dy2)
+
+% Genera un vector del tamaño en Y del cristal fotonico en la
+% grilla x2, donde cada elemento de este vector corresponde al er
+% de toda la fila correspondiente a ese indice en Y.
+
+% n_i = indice refraccion material i
+% layers_i = cantidad de capas material i 
+% h_i = espesor de la capa del material i
+% Nx2/Ny2 = tamaño de la dimension X/Y en la 2x Grid
+% dx2/dy2 = diferencial de dicha dimension
+
+ALL = layers1 + layers2;
+er1 = n1^2;
+er2 = n2^2;
+
+medios = [];
+for i=1:ALL
+    if mod(i,2) ~= 0
+        medios(end + 1) = er1;
+    else 
+        medios(end + 1) = er2;
+    end
+end
+
+Nh1 = round(h1/dy2);
+Nh2 = round(h2/dy2);
+
+EPSy = [];
+for e=medios
+    if e == er1
+        aux1 = er1*ones(1,Nh1);
+        EPSy = [EPSy aux1];
+    else
+        aux2 = er2*ones(1,Nh2);
+        EPSy = [EPSy aux2];
+    end
+end
+end
+
+function EPSx = LayerWithHoles(n1,n2,rep1,rep2,w1,w2,dx2)
+rep1 = rep1 + 1;
+ALL = rep1 + rep2;
+er1 = n1^2;
+er2 = n2^2;
+
+medios = [];
+for i=1:ALL
+    if mod(i,2) ~= 0
+        medios(end + 1) = er1;
+    else 
+        medios(end + 1) = er2;
+    end
+end
+
+Nw1 = round(w1/dx2);
+Nw2 = round(w2/dx2);
+
+EPSx = [];
+for i=1:length(medios)
+    if medios(i) == er1 && i==1
+        aux1 = er1*ones(1,round(Nw1/2));
+        EPSx = [EPSx aux1];
+    elseif medios(i) == er1 && i==length(medios)
+        aux1 = er1*ones(1,round(Nw1/2));
+        EPSx = [EPSx aux1];
+     elseif medios(i) == er1 && i~=1 && i~=length(medios)
+        aux1 = er1*ones(1,Nw1);
+        EPSx = [EPSx aux1];
+    else
+        aux2 = er2*ones(1,Nw2);
+        EPSx = [EPSx aux2];
+    end
+end
+
+end
+
+
+%debo mejorar esta funcion...
+function EPSx = RareLayer(n1,n0,w1,w2,w01,w02, dx2)
+ALL = 4;
+er1 = n1^2;
+er0 = n0^2;
+
+medios = [];
+for i=1:ALL
+    if mod(i,2) ~= 0
+        medios(end + 1) = er1;
+    else 
+        medios(end + 1) = er0;
+    end
+end
+
+Nw1 = round(w1/dx2);
+Nw2 = round(w2/dx2);
+Nw01 = round(w01/dx2);
+Nw02 = round(w02/dx2);
+
+EPSx = [];
+
+for i=1:length(medios)
+     if i == 1
+        aux1 = er1*ones(1,Nw1);
+        EPSx = [EPSx aux1];
+     elseif i == 2
+        aux2 = er0*ones(1,Nw01);
+        EPSx = [EPSx aux2];
+     elseif i == 4
+        aux2 = er0*ones(1,Nw02);
+        EPSx = [EPSx aux2];
+     else
+        aux1 = er1*ones(1,Nw2);
+        EPSx = [EPSx aux1];
+    end
+end
+end
